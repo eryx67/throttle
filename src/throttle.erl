@@ -17,7 +17,12 @@
 
 %%% setup throttling for a specific scope
 setup(Scope, RateLimit, RatePeriod) ->
-  {ok, _Pid} = supervisor:start_child(throttle_sup, [Scope, RateLimit, RatePeriod]),
+  case gproc:lookup_local_name({throttle, Scope}) of
+      undefined ->
+          {ok, _Pid} = supervisor:start_child(throttle_sup, [Scope, RateLimit, RatePeriod]);
+      Pid when is_pid(Pid) ->
+          ok
+  end,
   ok.
 
 check(Scope, Key) ->
@@ -35,7 +40,8 @@ start_link(Scope, Limit, Period) ->
 init({Scope, Limit, Period} = State) ->
   driver_call(init_counters, [Scope, Limit, Period]),
   {ok, _} = timer:send_interval(throttle_time:interval(Period), reset_counters),
-  {ok, State}.
+    gproc:add_local_name({throttle, Scope}),
+    {ok, State}.
 
 
 handle_info(reset_counters, {Scope, _Limit, _Period} = State) ->
