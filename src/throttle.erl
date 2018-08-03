@@ -21,7 +21,8 @@ setup(Scope, RateLimit, RatePeriod) ->
       undefined ->
           {ok, _Pid} = supervisor:start_child(throttle_sup, [Scope, RateLimit, RatePeriod]);
       Pid when is_pid(Pid) ->
-          ok
+          ok = supervisor:terminate_child(throttle_sup, Pid),
+          ok = setup(Scope, RateLimit, RatePeriod)
   end,
   ok.
 
